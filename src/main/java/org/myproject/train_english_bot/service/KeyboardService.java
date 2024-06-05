@@ -11,7 +11,7 @@ import java.util.List;
 
 @Service
 public class KeyboardService {
-    public ReplyKeyboardMarkup getDefaultKeyboard() {
+    public static ReplyKeyboardMarkup getDefaultKeyboard() {
         var keyboardRows = new ArrayList<KeyboardRow>();
         var row = new KeyboardRow();
         row.addAll(Arrays.asList("Training", "New words"));
@@ -19,7 +19,7 @@ public class KeyboardService {
         return createKeyboardMarkup(keyboardRows);
     }
 
-    public ReplyKeyboardMarkup getAddWordKeyboard() {
+    public static ReplyKeyboardMarkup getAddWordKeyboard() {
         var keyboardRows = new ArrayList<KeyboardRow>();
         var row = new KeyboardRow();
         row.add("Stop adding new words");
@@ -27,7 +27,7 @@ public class KeyboardService {
         return createKeyboardMarkup(keyboardRows);
     }
 
-    public ReplyKeyboardMarkup getTrainingKeyboard(@NotNull List<String> buttonNames) {
+    public static ReplyKeyboardMarkup getTrainingKeyboard(@NotNull List<String> buttonNames) {
         var keyboardRows = new ArrayList<KeyboardRow>();
         for (int i = 0; i < buttonNames.size(); i += 2) {
             var row = new KeyboardRow();
@@ -37,7 +37,7 @@ public class KeyboardService {
         return createKeyboardMarkup(keyboardRows);
     }
 
-    private ReplyKeyboardMarkup createKeyboardMarkup(List<KeyboardRow> rows) {
+    private static ReplyKeyboardMarkup createKeyboardMarkup(List<KeyboardRow> rows) {
         var keyboardMarkup = new ReplyKeyboardMarkup(rows);
         keyboardMarkup.setResizeKeyboard(true);
         return keyboardMarkup;
