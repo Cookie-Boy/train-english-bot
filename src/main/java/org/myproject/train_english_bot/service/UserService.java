@@ -1,5 +1,7 @@
 package org.myproject.train_english_bot.service;
 
+import jakarta.transaction.Transactional;
+import org.hibernate.Hibernate;
 import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.User;
 import org.myproject.train_english_bot.models.UserRepository;
@@ -9,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 // @Service позволяет НЕ СОЗДАВАТЬ экземпляры классов (new User()), где используется сервис
@@ -25,25 +28,60 @@ public class UserService {
         User user = new User(chatId,
                 Mode.DEFAULT,
                 new Timestamp(System.currentTimeMillis()),
-                new ArrayList<>());
+                new ArrayList<Word>());
         saveUser(user);
     }
 
-    public void changeWordLevel(User user, Word word, byte value) {
-        word.setLevel((byte) (word.getLevel() + value));
+    @Transactional
+    public void addUserWord(User user, Word word) {
+        user.getWords().add(word);
         saveUser(user);
     }
 
-    public void toggleWordAvailability(User user, Word word) {
-        word.setAvailable(!word.isAvailable());
+    @Transactional
+    public Word adjustWordLevel(User user, Word word, byte value) {
+        Optional<Word> optionalWord = findWordInList(user.getWords(), word);
+        if (optionalWord.isEmpty())
+            return null;
+        Word foundWord = optionalWord.get();
+        byte currentLevel = foundWord.getLevel();
+        if (currentLevel >= 0) {
+            foundWord.setLevel((byte) (currentLevel + value));
+            saveUser(user);
+        }
+        return foundWord;
+    }
+
+    @Transactional
+    public Word toggleWordAvailability(User user, Word word) {
+        Optional<Word> optionalWord = findWordInList(user.getWords(), word);
+        if (optionalWord.isEmpty()) {
+            System.out.println("here");
+            return null;
+        }
+        Word foundWord = optionalWord.get();
+        foundWord.setAvailable(!foundWord.isAvailable());
+        saveUser(user);
+        return foundWord;
+    }
+
+    @Transactional
+    public void enableAllWords(User user) {
+        user.getWords().forEach(w -> w.setAvailable(true));
         saveUser(user);
     }
 
-    public boolean isAllWordsAvailable(User user) {
-        return user.getWords().stream().allMatch(w -> w.isAvailable());
+    @Transactional
+    public boolean areAllWordsNotAvailable(User user) {
+        return user.getWords().stream().noneMatch(w -> w.isAvailable());
     }
 
+    @Transactional
     public void saveUser(User user) {
         userRepository.save(user);
+    }
+
+    private Optional<Word> findWordInList(List<Word> words, Word word) {
+        return words.stream().filter(w -> w.equals(word)).findFirst();
     }
 }

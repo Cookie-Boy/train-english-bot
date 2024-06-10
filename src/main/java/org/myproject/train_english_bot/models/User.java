@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.Optional;
 
 @Entity(name = "user-table")
 public class User {
@@ -16,7 +15,7 @@ public class User {
 
     private Timestamp nextNotice;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     private List<Word> words;
 
     public User(Long chatId, Mode mode, Timestamp nextNotice, List<Word> words) {
