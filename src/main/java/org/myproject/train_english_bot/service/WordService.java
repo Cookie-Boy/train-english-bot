@@ -32,9 +32,12 @@ public class AddingService {
         for (int i = 0; i < word.length(); i++) {
             char symbol = word.charAt(i);
             LanguageType symbolLang = getSymbolLanguage(symbol);
+            boolean isHyphen = symbol == '-' || symbol == '–' || symbol == '—';
 
             if (symbolLang == LanguageType.UNKNOWN) {
-                return LanguageType.UNKNOWN;
+                if (!isHyphen)
+                    return LanguageType.UNKNOWN;
+                continue;
             }
             if (result == LanguageType.UNKNOWN) {
                 result = symbolLang;
