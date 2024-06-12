@@ -2,6 +2,7 @@ package org.myproject.train_english_bot.config;
 
 import lombok.SneakyThrows;
 import org.myproject.train_english_bot.TelegramBot;
+import org.myproject.train_english_bot.commands.StopCommand;
 import org.myproject.train_english_bot.models.Word;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

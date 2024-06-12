@@ -1,5 +1,7 @@
 package org.myproject.train_english_bot.service;
 
+import org.myproject.train_english_bot.models.Mode;
+import org.myproject.train_english_bot.models.Question;
 import org.myproject.train_english_bot.models.User;
 import org.myproject.train_english_bot.models.Word;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,29 +12,21 @@ import java.util.*;
 @Service
 public class TrainingService {
     @Autowired
-    private Map<Long, Word> correctAnswers;
+    private Map<Long, Word> answers;
 
-    public Map<Long, Word> getCorrectAnswers() {
-        return correctAnswers;
+    public Map<Long, Word> getAnswers() {
+        return answers;
     }
 
-    public void setCorrectAnswers(Map<Long, Word> correctAnswers) {
-        this.correctAnswers = correctAnswers;
+    public Word getAnswer(Long chatId) {
+        return this.answers.get(chatId);
     }
 
-    public Word getCorrectAnswer(Long chatId) {
-        return this.correctAnswers.get(chatId);
+    public void addAnswer(Long chatId, Word correctAnswer) {
+        this.answers.put(chatId, correctAnswer);
     }
 
-    public void addCorrectAnswer(Long chatId, Word correctAnswer) {
-        this.correctAnswers.put(chatId, correctAnswer);
-    }
-
-    public void removeCorrectAnswer(User user) {
-        this.correctAnswers.remove(user);
-    }
-
-    public List<String> generateQuestion(User user) {
+    private List<String> getOptions(User user) {
         List<Word> words = user.getWords();
         if (words.size() < 4) {
             return null;
@@ -42,7 +36,7 @@ public class TrainingService {
         var random = new Random();
         int randomValue = random.nextInt(availableWords.size());
         Word correctAnswer = availableWords.get(randomValue);
-        addCorrectAnswer(user.getChatId(), correctAnswer);
+        addAnswer(user.getChatId(), correctAnswer);
 
         var options = new ArrayList<String>();
         options.add(correctAnswer.getEnVersion());
@@ -57,5 +51,14 @@ public class TrainingService {
         }
         Collections.shuffle(options);
         return options;
+    }
+
+    public Question generateQuestion(User user) {
+        Long chatId = user.getChatId();
+        List<String> options = getOptions(user);
+        if (options == null) {
+            return null;
+        }
+        return new Question(getAnswer(chatId), options);
     }
 }

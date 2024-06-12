@@ -3,7 +3,7 @@ package org.myproject.train_english_bot.service;
 import org.myproject.train_english_bot.models.LanguageType;
 import org.myproject.train_english_bot.models.Word;
 
-public class AddingService {
+public class WordService {
     public static Word getLearningWord(String text) {
         String[] pair = text.toLowerCase().split(" ");
         if (pair.length != 2) {
@@ -27,7 +27,7 @@ public class AddingService {
         return new Word(pair[1], pair[0]);
     }
 
-    private static LanguageType getWordLanguage(String word) {
+    public static LanguageType getWordLanguage(String word) {
         LanguageType result = LanguageType.UNKNOWN;
         for (int i = 0; i < word.length(); i++) {
             char symbol = word.charAt(i);
@@ -50,7 +50,7 @@ public class AddingService {
         return result;
     }
 
-    private static LanguageType getSymbolLanguage(char symbol) {
+    public static LanguageType getSymbolLanguage(char symbol) {
         if ((symbol >= 'A' && symbol <= 'Z') || (symbol >= 'a' && symbol <= 'z')) {
             return LanguageType.ENGLISH;
         }
