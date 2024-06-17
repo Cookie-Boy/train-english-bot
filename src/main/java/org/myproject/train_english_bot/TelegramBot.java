@@ -2,16 +2,20 @@ package org.myproject.train_english_bot;
 
 import org.myproject.train_english_bot.commands.AdvancedCommand;
 import org.myproject.train_english_bot.commands.Command;
+import org.myproject.train_english_bot.events.MessageEvent;
+import org.myproject.train_english_bot.events.TrainingEvent;
 import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.Question;
 import org.myproject.train_english_bot.models.User;
 import org.myproject.train_english_bot.models.Word;
 import org.myproject.train_english_bot.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -21,6 +25,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class TelegramBot extends TelegramLongPollingBot {
@@ -35,6 +40,9 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Autowired
     private CommandService commandService;
+
+    @Autowired
+    private SchedulerService schedulerService;
 
     public TelegramBot(DefaultBotOptions options, String botToken, String botName) {
         super(options, botToken);
@@ -55,12 +63,16 @@ public class TelegramBot extends TelegramLongPollingBot {
             return;
 
         String text = update.getMessage().getText().toLowerCase();
-        var chatId = update.getMessage().getChatId();
+        Long chatId = update.getMessage().getChatId();
 
         var optionalUser = userService.getUser(chatId);
         if (optionalUser.isEmpty()) {
             sendMessage(chatId, "Hello, nice to meet you here!");
-            userService.addUser(chatId);
+            User user = userService.addUser(chatId);
+            var time = SchedulerService.getDefaultTrainingTime();
+            userService.setUserTrainingNotice(user, time);
+            time = SchedulerService.getDateTime(18, 10);
+            userService.setUserRandomNotice(user, time);
             return;
         }
         User user = optionalUser.get(); // ВСЕ ВРЕМЯ СОЗДАЕТСЯ ЛОКАЛЬНАЯ ПЕРЕМЕННАЯ
@@ -166,6 +178,45 @@ public class TelegramBot extends TelegramLongPollingBot {
         sendMessage(chatId,
                 "Translation for '" + question.getAnswer().getRuVersion() + "': ",
                 keyboard);
+    }
+
+    @EventListener
+    public void handleMessageEvent(MessageEvent event) {
+        sendMessage(event.getChatId(), event.getText(), event.getKeyboard());
+    }
+
+    @EventListener
+    public void handleTrainingEvent(TrainingEvent event) {
+        User user = event.getUser();
+        userService.setUserMode(user, Mode.TRAIN);
+        Question question = trainingService.generateQuestion(user);
+        var keyboard = KeyboardService.getTrainingKeyboard(question.getOptions());
+        sendDisappearingMessage(user.getChatId(),
+                "Translation for '" + question.getAnswer().getRuVersion() + "': ",
+                60);
+    }
+
+    public void sendDisappearingMessage(Long chatId, String text, int delay) {
+        var message = new SendMessage(chatId.toString(), text);
+        try {
+            Integer messageId = this.sendApiMethod(message).getMessageId();
+            var scheduler = schedulerService.getScheduler();
+
+            scheduler.schedule(() -> {
+                var deleteMessage = new DeleteMessage();
+                deleteMessage.setChatId(chatId);
+                deleteMessage.setMessageId(messageId);
+
+                try {
+                    execute(deleteMessage);
+                } catch (TelegramApiException e) {
+                    logger.severe("An error occurred while deleting a message: " + e.getMessage());
+                }
+
+            }, delay, TimeUnit.SECONDS);
+        } catch (TelegramApiException e) {
+            logger.severe("An error occurred while sending a message: " + e.getMessage());
+        }
     }
 
     public void sendMessage(Long chatId, String text) {

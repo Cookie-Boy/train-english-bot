@@ -17,7 +17,8 @@ public class CommandService {
                 "/stop", new StopCommand(userService),
                 "/words", new WordsCommand(userService),
                 "/clear", new ClearCommand(userService),
-                "/remove", new RemoveCommand(userService));
+                "/remove", new RemoveCommand(userService),
+                "/time", new TimeCommand(userService));
     }
 
     public Command getCommand(String command) {
@@ -31,7 +32,8 @@ public class CommandService {
                 new BotCommand("/stop", "stops any mode"),
                 new BotCommand("/words", "show word list"),
                 new BotCommand("/clear", "clear word list"),
-                new BotCommand("/remove", "delete one word")
+                new BotCommand("/remove", "delete one word"),
+                new BotCommand("/time", "set time for daily training notifications")
         );
     }
 }

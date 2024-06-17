@@ -2,7 +2,7 @@ package org.myproject.train_english_bot.models;
 
 import jakarta.persistence.*;
 
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity(name = "user-table")
@@ -13,15 +13,18 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Mode mode;
 
-    private Timestamp nextNotice;
+    private LocalDateTime trainingNotice;
+
+    private LocalDateTime randomNotice;
 
     @ElementCollection(fetch = FetchType.EAGER)
     private List<Word> words;
 
-    public User(Long chatId, Mode mode, Timestamp nextNotice, List<Word> words) {
+    public User(Long chatId, Mode mode, LocalDateTime trainingNotice, LocalDateTime randomNotice, List<Word> words) {
         this.chatId = chatId;
         this.mode = mode;
-        this.nextNotice = nextNotice;
+        this.trainingNotice = trainingNotice;
+        this.randomNotice = randomNotice;
         this.words = words;
     }
 
@@ -45,19 +48,27 @@ public class User {
         this.mode = mode;
     }
 
-    public Timestamp getNextNotice() {
-        return nextNotice;
-    }
-
-    public void setNextNotice(Timestamp nextNotice) {
-        this.nextNotice = nextNotice;
-    }
-
     public List<Word> getWords() {
         return words;
     }
 
     public void setWords(List<Word> words) {
         this.words = words;
+    }
+
+    public LocalDateTime getTrainingNotice() {
+        return trainingNotice;
+    }
+
+    public void setTrainingNotice(LocalDateTime trainingNotice) {
+        this.trainingNotice = trainingNotice;
+    }
+
+    public LocalDateTime getRandomNotice() {
+        return randomNotice;
+    }
+
+    public void setRandomNotice(LocalDateTime randomNotice) {
+        this.randomNotice = randomNotice;
     }
 }

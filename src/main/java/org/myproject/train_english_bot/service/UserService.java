@@ -9,27 +9,56 @@ import org.myproject.train_english_bot.models.Word;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-// @Service позволяет НЕ СОЗДАВАТЬ экземпляры классов (new User()), где используется сервис
 @Service
 public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    public List<User> getUsersByTrainingNotice(int hour, int minute) {
+        List<User> users = new ArrayList<>();
+        for (User user : userRepository.findAll()) {
+            LocalDateTime userTime = user.getTrainingNotice();
+            if (userTime == null)
+                continue;
+
+            if (userTime.getHour() == hour && userTime.getMinute() == minute) {
+                users.add(user);
+            }
+        }
+        return users;
+    }
+
+    public List<User> getUsersByRandomNotice(int hour, int minute) {
+        List<User> users = new ArrayList<>();
+        for (User user : userRepository.findAll()) {
+            LocalDateTime userTime = user.getRandomNotice();
+            if (userTime == null)
+                continue;
+
+            if (userTime.getHour() == hour && userTime.getMinute() == minute) {
+                users.add(user);
+            }
+        }
+        return users;
+    }
+
     public Optional<User> getUser(Long chatId) {
         return userRepository.findById(chatId);
     }
 
-    public void addUser(Long chatId) {
+    public User addUser(Long chatId) {
         User user = new User(chatId,
                 Mode.DEFAULT,
-                new Timestamp(System.currentTimeMillis()),
+                LocalDateTime.now(),
+                LocalDateTime.now(),
                 new ArrayList<Word>());
         saveUser(user);
+        return user;
     }
 
     @Transactional
@@ -64,7 +93,7 @@ public class UserService {
             return null;
         Word foundWord = optionalWord.get();
         byte currentLevel = foundWord.getLevel();
-        if (currentLevel >= 0) {
+        if ((value > 0 && currentLevel < 5) || (value < 0 && currentLevel > 0)) {
             foundWord.setLevel((byte) (currentLevel + value));
             saveUser(user);
         }
@@ -102,9 +131,23 @@ public class UserService {
     }
 
     @Transactional
+    public void setUserTrainingNotice(User user, LocalDateTime trainingNotice) {
+        user.setTrainingNotice(trainingNotice);
+        saveUser(user);
+    }
+
+    @Transactional
+    public void setUserRandomNotice(User user, LocalDateTime trainingNotice) {
+        user.setRandomNotice(trainingNotice);
+        saveUser(user);
+    }
+
+    @Transactional
     public void saveUser(User user) {
         userRepository.save(user);
     }
+
+    public List<User> findAllUsersByNotice;
 
     public int findWordIndex(User user, String arg) {
         List<Word> words = user.getWords();

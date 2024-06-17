@@ -1,6 +1,5 @@
 package org.myproject.train_english_bot.service;
 
-import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.Question;
 import org.myproject.train_english_bot.models.User;
 import org.myproject.train_english_bot.models.Word;
