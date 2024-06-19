@@ -12,13 +12,15 @@ public class CommandService {
     private final Map<String, Command> commandMap;
 
     public CommandService(UserService userService) {
-        this.commandMap = Map.of("/train", new TrainCommand(userService),
+        this.commandMap = Map.of(
+                "/train", new TrainCommand(userService),
                 "/add", new AddCommand(userService),
                 "/stop", new StopCommand(userService),
                 "/words", new WordsCommand(userService),
                 "/clear", new ClearCommand(userService),
                 "/remove", new RemoveCommand(userService),
-                "/time", new TimeCommand(userService));
+                "/traintime", new TrainTimeCommand(userService),
+                "/randomtime", new RandomTimeCommand(userService));
     }
 
     public Command getCommand(String command) {
@@ -33,7 +35,8 @@ public class CommandService {
                 new BotCommand("/words", "show word list"),
                 new BotCommand("/clear", "clear word list"),
                 new BotCommand("/remove", "delete one word"),
-                new BotCommand("/time", "set time for daily training notifications")
+                new BotCommand("/traintime", "set time for daily training notifications"),
+                new BotCommand("/randomtime", "set time for one-time training")
         );
     }
 }

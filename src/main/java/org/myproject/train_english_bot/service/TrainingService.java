@@ -11,34 +11,29 @@ import java.util.*;
 @Service
 public class TrainingService {
     @Autowired
-    private Map<Long, Word> answers;
-
-    public Map<Long, Word> getAnswers() {
-        return answers;
+    private Map<Long, Question> questions;
+    
+    public Question getQuestionByChatId(Long chatId) {
+        return questions.get(chatId);
     }
 
-    public Word getAnswer(Long chatId) {
-        return this.answers.get(chatId);
+    public void putQuestion(Long chatId, Question question) {
+        questions.put(chatId, question);
     }
 
-    public void addAnswer(Long chatId, Word correctAnswer) {
-        this.answers.put(chatId, correctAnswer);
-    }
-
-    private List<String> getOptions(User user) {
+    public Question generateQuestion(User user) {
         List<Word> words = user.getWords();
         if (words.size() < 4) {
             return null;
         }
 
-        List<Word> availableWords = words.stream().filter(w -> w.isAvailable()).toList();
+        List<Word> availableWords = words.stream().filter(Word::isAvailable).toList(); // w -> w.isAvailable()
         var random = new Random();
         int randomValue = random.nextInt(availableWords.size());
-        Word correctAnswer = availableWords.get(randomValue);
-        addAnswer(user.getChatId(), correctAnswer);
+        Word answer = availableWords.get(randomValue);
 
         var options = new ArrayList<String>();
-        options.add(correctAnswer.getEnVersion());
+        options.add(answer.getEnVersion());
 
         while (options.size() < 4) {
             randomValue = random.nextInt(words.size());
@@ -49,15 +44,6 @@ public class TrainingService {
             options.add(option);
         }
         Collections.shuffle(options);
-        return options;
-    }
-
-    public Question generateQuestion(User user) {
-        Long chatId = user.getChatId();
-        List<String> options = getOptions(user);
-        if (options == null) {
-            return null;
-        }
-        return new Question(getAnswer(chatId), options);
+        return new Question(options, answer, null);
     }
 }

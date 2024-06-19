@@ -1,8 +1,8 @@
 package org.myproject.train_english_bot.service;
 
+import lombok.Getter;
 import org.myproject.train_english_bot.events.MessageEvent;
-import org.myproject.train_english_bot.events.TrainingEvent;
-import org.myproject.train_english_bot.models.Question;
+import org.myproject.train_english_bot.events.QuestionEvent;
 import org.myproject.train_english_bot.models.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -22,15 +24,20 @@ public class SchedulerService {
     private UserService userService;
 
     @Autowired
-    private TrainingService trainingService;
-
-    @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Getter
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    public ScheduledExecutorService getScheduler() {
-        return scheduler;
+    @Getter
+    private final Map<Integer, Long> sentMessages = new HashMap<>();
+
+    public void putMessage(Integer messageId, Long chatId) {
+        sentMessages.put(messageId, chatId);
+    }
+
+    public void removeMessage(Integer messageId) {
+        sentMessages.remove(messageId);
     }
 
     @Scheduled(cron = "0 * * * * *")
@@ -38,31 +45,31 @@ public class SchedulerService {
         var now = LocalDateTime.now();
         List<User> users = userService.getUsersByTrainingNotice(now.getHour(), now.getMinute());
         for (User user : users) {
-            eventPublisher.publishEvent(new MessageEvent(this,
-                    user.getChatId(),
-                    "It's time to start the training!",
-                    null));
-            userService.setUserTrainingNotice(user, user.getTrainingNotice().plusDays(1));
+            eventPublisher.publishEvent(
+                    new MessageEvent(
+                            this,
+                            user.getChatId(),
+                            "It's time to start the training!",
+                            null));
+            userService.setUserTrainingNotification(user, user.getTrainingNotification().plusDays(1));
         }
     }
 
     @Scheduled(cron = "0 * * * * *")
-    public void sendRandomNotifications() {
+    public void sendQuickNotifications() {
         var now = LocalDateTime.now();
         List<User> users = userService.getUsersByRandomNotice(now.getHour(), now.getMinute());
         for (User user : users) {
-            Question question = trainingService.generateQuestion(user);
-            eventPublisher.publishEvent(new TrainingEvent(this, user));
+            eventPublisher.publishEvent(new QuestionEvent(this, user));
         }
-
     }
 
     public static LocalDateTime getDefaultTrainingTime() {
         LocalDateTime now = LocalDateTime.now();
         LocalDate day = now.toLocalDate();
-//        if (now.getHour() >= 10) {
-//            day = day.plusDays(1);
-//        }
+        if (now.getHour() >= 10) {
+            day = day.plusDays(1);
+        }
         LocalTime time = LocalTime.of(10, 0);
         return LocalDateTime.of(day, time);
     }

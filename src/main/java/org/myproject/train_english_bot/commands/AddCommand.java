@@ -3,9 +3,7 @@ package org.myproject.train_english_bot.commands;
 import org.myproject.train_english_bot.TelegramBot;
 import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.User;
-import org.myproject.train_english_bot.models.Word;
 import org.myproject.train_english_bot.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 

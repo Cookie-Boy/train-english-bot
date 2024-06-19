@@ -1,7 +1,6 @@
 package org.myproject.train_english_bot.service;
 
 import jakarta.transaction.Transactional;
-import org.hibernate.Hibernate;
 import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.User;
 import org.myproject.train_english_bot.models.UserRepository;
@@ -22,7 +21,7 @@ public class UserService {
     public List<User> getUsersByTrainingNotice(int hour, int minute) {
         List<User> users = new ArrayList<>();
         for (User user : userRepository.findAll()) {
-            LocalDateTime userTime = user.getTrainingNotice();
+            LocalDateTime userTime = user.getTrainingNotification();
             if (userTime == null)
                 continue;
 
@@ -36,7 +35,7 @@ public class UserService {
     public List<User> getUsersByRandomNotice(int hour, int minute) {
         List<User> users = new ArrayList<>();
         for (User user : userRepository.findAll()) {
-            LocalDateTime userTime = user.getRandomNotice();
+            LocalDateTime userTime = user.getQuickNotification();
             if (userTime == null)
                 continue;
 
@@ -52,11 +51,14 @@ public class UserService {
     }
 
     public User addUser(Long chatId) {
-        User user = new User(chatId,
+        User user = new User(
+                chatId,
                 Mode.DEFAULT,
                 LocalDateTime.now(),
                 LocalDateTime.now(),
-                new ArrayList<Word>());
+                0,
+                new ArrayList<Word>()
+        );
         saveUser(user);
         return user;
     }
@@ -121,7 +123,7 @@ public class UserService {
 
     @Transactional
     public boolean areAllWordsNotAvailable(User user) {
-        return user.getWords().stream().noneMatch(w -> w.isAvailable());
+        return user.getWords().stream().noneMatch(Word::isAvailable);
     }
 
     @Transactional
@@ -131,14 +133,22 @@ public class UserService {
     }
 
     @Transactional
-    public void setUserTrainingNotice(User user, LocalDateTime trainingNotice) {
-        user.setTrainingNotice(trainingNotice);
+    public void setUserTrainingNotification(User user, LocalDateTime trainingNotification) {
+        user.setTrainingNotification(trainingNotification);
         saveUser(user);
     }
 
     @Transactional
-    public void setUserRandomNotice(User user, LocalDateTime trainingNotice) {
-        user.setRandomNotice(trainingNotice);
+    public void setUserQuickNotification(User user, LocalDateTime quickNotification) {
+        user.setQuickNotification(quickNotification);
+        saveUser(user);
+    }
+
+    @Transactional
+    public void increaseUserQuickNotification(User user) {
+        var time = user.getTrainingNotification();
+        time = time.plusHours(user.getQuickInterval());
+        user.setQuickNotification(time);
         saveUser(user);
     }
 
@@ -146,8 +156,6 @@ public class UserService {
     public void saveUser(User user) {
         userRepository.save(user);
     }
-
-    public List<User> findAllUsersByNotice;
 
     public int findWordIndex(User user, String arg) {
         List<Word> words = user.getWords();

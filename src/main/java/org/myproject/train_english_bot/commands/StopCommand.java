@@ -22,10 +22,14 @@ public class StopCommand extends Command {
         userService.setUserMode(user, Mode.DEFAULT);
         if (prevMode == Mode.TRAIN) {
             bot.sendMessage(user.getChatId(), "Training has been stopped.");
+        } else if (prevMode == Mode.TRAIN_ONCE) {
+            bot.sendMessage(user.getChatId(), "Mini-training has been stopped.");
         } else if (prevMode == Mode.ADD) {
             bot.sendMessage(user.getChatId(), "Adding has been stopped");
-        } else {
+        } else if (prevMode == Mode.REMOVE) {
             bot.sendMessage(user.getChatId(), "Removing has been stopped.");
+        } else {
+            bot.sendMessage(user.getChatId(), "You are not in any mode.");
         }
     }
 }

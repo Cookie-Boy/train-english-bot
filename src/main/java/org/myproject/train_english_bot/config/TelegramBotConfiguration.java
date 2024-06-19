@@ -2,8 +2,7 @@ package org.myproject.train_english_bot.config;
 
 import lombok.SneakyThrows;
 import org.myproject.train_english_bot.TelegramBot;
-import org.myproject.train_english_bot.commands.StopCommand;
-import org.myproject.train_english_bot.models.Word;
+import org.myproject.train_english_bot.models.Question;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,7 +37,7 @@ public class TelegramBotConfiguration {
     }
 
     @Bean
-    public Map<Long, Word> correctAnswers() {
+    public Map<Long, Question> questions() {
         return new HashMap<>();
     }
 }

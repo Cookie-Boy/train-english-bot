@@ -3,7 +3,7 @@ package org.myproject.train_english_bot;
 import org.myproject.train_english_bot.commands.AdvancedCommand;
 import org.myproject.train_english_bot.commands.Command;
 import org.myproject.train_english_bot.events.MessageEvent;
-import org.myproject.train_english_bot.events.TrainingEvent;
+import org.myproject.train_english_bot.events.QuestionEvent;
 import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.Question;
 import org.myproject.train_english_bot.models.User;
@@ -16,6 +16,7 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
@@ -25,6 +26,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -70,9 +72,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             sendMessage(chatId, "Hello, nice to meet you here!");
             User user = userService.addUser(chatId);
             var time = SchedulerService.getDefaultTrainingTime();
-            userService.setUserTrainingNotice(user, time);
+            userService.setUserTrainingNotification(user, time);
             time = SchedulerService.getDateTime(18, 10);
-            userService.setUserRandomNotice(user, time);
+            userService.setUserQuickNotification(user, time);
             return;
         }
         User user = optionalUser.get(); // ВСЕ ВРЕМЯ СОЗДАЕТСЯ ЛОКАЛЬНАЯ ПЕРЕМЕННАЯ
@@ -94,7 +96,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         switch (mode) {
             case TRAIN -> {
-                Word answer = trainingService.getAnswer(chatId);
+                Word answer = trainingService.getQuestionByChatId(chatId).getAnswer();
                 String resultPart = String.format("Translation for '%s' is '%s'",
                         answer.getRuVersion(),
                         answer.getEnVersion());
@@ -117,6 +119,22 @@ public class TelegramBot extends TelegramLongPollingBot {
                     return;
                 }
                 askQuestion(user);
+            }
+            case TRAIN_ONCE -> {
+                Question question = trainingService.getQuestionByChatId(chatId);
+                Word answer = question.getAnswer();
+                String resultPart = String.format("Translation for '%s' is '%s'",
+                        answer.getRuVersion(),
+                        answer.getEnVersion());
+
+                if (text.equals(answer.getEnVersion())) {
+                    sendMessage(chatId, "✅ Correct! " + resultPart);
+                } else {
+                    sendMessage(chatId, "❌ You are wrong! " + resultPart);
+                }
+                userService.increaseUserQuickNotification(user);
+                schedulerService.removeMessage(question.getMessageId());
+                userService.setUserMode(user, Mode.DEFAULT);
             }
             case ADD -> handleAddingWord(user, text);
             case REMOVE -> {
@@ -143,7 +161,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     public void handleRemovingWord(User user, String word) {
         Long chatId = user.getChatId();
-        if (word.chars().allMatch(c -> Character.isDigit(c))) {
+        if (word.chars().allMatch(Character::isDigit)) {
             try {
                 Word delWord = userService.removeUserWord(user, Integer.parseInt(word) - 1);
                 if (delWord == null) {
@@ -178,6 +196,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         sendMessage(chatId,
                 "Translation for '" + question.getAnswer().getRuVersion() + "': ",
                 keyboard);
+        trainingService.putQuestion(chatId, question);
     }
 
     @EventListener
@@ -186,44 +205,63 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     @EventListener
-    public void handleTrainingEvent(TrainingEvent event) {
+    private void handleQuestionEvent(QuestionEvent event) {
         User user = event.getUser();
-        userService.setUserMode(user, Mode.TRAIN);
+        Long chatId = user.getChatId();
+        userService.setUserMode(user, Mode.TRAIN_ONCE);
         Question question = trainingService.generateQuestion(user);
+        if (question == null)
+            return;
+
         var keyboard = KeyboardService.getTrainingKeyboard(question.getOptions());
-        sendDisappearingMessage(user.getChatId(),
+        Message message = sendDisappearingMessage(
+                chatId,
                 "Translation for '" + question.getAnswer().getRuVersion() + "': ",
+                keyboard,
                 60);
+        Integer messageId = message.getMessageId();
+        question.setMessageId(messageId);
+        schedulerService.putMessage(messageId, chatId);
+        trainingService.putQuestion(chatId, question);
     }
 
-    public void sendDisappearingMessage(Long chatId, String text, int delay) {
-        var message = new SendMessage(chatId.toString(), text);
-        try {
-            Integer messageId = this.sendApiMethod(message).getMessageId();
-            var scheduler = schedulerService.getScheduler();
-
-            scheduler.schedule(() -> {
-                var deleteMessage = new DeleteMessage();
-                deleteMessage.setChatId(chatId);
-                deleteMessage.setMessageId(messageId);
-
-                try {
-                    execute(deleteMessage);
-                } catch (TelegramApiException e) {
-                    logger.severe("An error occurred while deleting a message: " + e.getMessage());
-                }
-
-            }, delay, TimeUnit.SECONDS);
-        } catch (TelegramApiException e) {
-            logger.severe("An error occurred while sending a message: " + e.getMessage());
-        }
+    public Message sendDisappearingMessage(Long chatId, String text, int delay) {
+        return sendDisappearingMessage(chatId, text, null, delay);
     }
 
-    public void sendMessage(Long chatId, String text) {
-        sendMessage(new SendMessage(chatId.toString(), text));
+    public Message sendDisappearingMessage(Long chatId, String text, ReplyKeyboardMarkup keyboard, int delay) {
+        Message message = sendMessage(chatId, text, keyboard);
+        Integer messageId = message.getMessageId();
+        var scheduler = schedulerService.getScheduler();
+
+        scheduler.schedule(() -> {
+            if (!schedulerService.getSentMessages().containsKey(messageId))
+                return;
+
+            Optional<User> optionalUser = userService.getUser(chatId);
+            if (optionalUser.isEmpty())
+                return;
+
+            User user = optionalUser.get();
+            userService.setUserMode(user, Mode.DEFAULT);
+            var deleteMessage = new DeleteMessage();
+            deleteMessage.setChatId(chatId);
+            deleteMessage.setMessageId(messageId);
+
+            try {
+                this.execute(deleteMessage);
+            } catch (TelegramApiException e) {
+                logger.severe("An error occurred while deleting a message: " + e.getMessage());
+            }
+        }, delay, TimeUnit.SECONDS);
+        return message;
     }
 
-    public void sendMessage(Long chatId, String text, ReplyKeyboardMarkup keyboard) {
+    public Message sendMessage(Long chatId, String text) {
+        return sendMessage(chatId, text, null);
+    }
+
+    public Message sendMessage(Long chatId, String text, ReplyKeyboardMarkup keyboard) {
         var message = new SendMessage(chatId.toString(), text);
         if (keyboard == null) {
             var removeKeyboard = new ReplyKeyboardRemove();
@@ -232,15 +270,16 @@ public class TelegramBot extends TelegramLongPollingBot {
         } else {
             message.setReplyMarkup(keyboard);
         }
-        sendMessage(message);
+        return sendMessage(message);
     }
 
-    public void sendMessage(SendMessage message) {
+    public Message sendMessage(SendMessage message) {
         try {
-            this.sendApiMethod(message);
+            return this.sendApiMethod(message);
         } catch (TelegramApiException e) {
             logger.severe("An error occurred while sending a message: " + e.getMessage());
         }
+        return null;
     }
 
     private void setCommands(List<BotCommand> listOfCommands) {
