@@ -2,8 +2,7 @@ package org.myproject.train_english_bot;
 
 import org.myproject.train_english_bot.commands.AdvancedCommand;
 import org.myproject.train_english_bot.commands.Command;
-import org.myproject.train_english_bot.events.MessageEvent;
-import org.myproject.train_english_bot.events.QuestionEvent;
+import org.myproject.train_english_bot.events.*;
 import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.Question;
 import org.myproject.train_english_bot.models.User;
@@ -85,10 +84,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             Command command = commandService.getCommand(args.getFirst());
             if (command != null) {
                 if (args.size() == 1) {
-                    command.execute(this, user);
+                    command.execute(user);
                 } else {
                     AdvancedCommand advancedCommand = (AdvancedCommand)command;
-                    advancedCommand.execute(this, user, args.subList(1, args.size()));
+                    advancedCommand.execute(user, args.subList(1, args.size()));
                 }
                 return;
             }
@@ -147,6 +146,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    @EventListener
+    private void handleAddingWord(AddEvent event) {
+        handleAddingWord(event.getUser(), event.getText());
+    }
+
     public void handleAddingWord(User user, String text) {
         Long chatId = user.getChatId();
         Word word = WordService.getLearningWord(text);
@@ -157,6 +161,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
         userService.addUserWord(user, word);
         sendMessage(chatId, "Word has been added.");
+    }
+
+    @EventListener
+    private void handleRemovingWord(RemoveEvent event) {
+        handleRemovingWord(event.getUser(), event.getText());
     }
 
     public void handleRemovingWord(User user, String word) {
@@ -200,12 +209,17 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     @EventListener
-    public void handleMessageEvent(MessageEvent event) {
+    private void handleMessageEvent(MessageEvent event) {
         sendMessage(event.getChatId(), event.getText(), event.getKeyboard());
     }
 
     @EventListener
     private void handleQuestionEvent(QuestionEvent event) {
+        askQuestion(event.getUser());
+    }
+
+    @EventListener
+    private void handleQuickQuestionEvent(QuickQuestionEvent event) {
         User user = event.getUser();
         Long chatId = user.getChatId();
         userService.setUserMode(user, Mode.TRAIN_ONCE);

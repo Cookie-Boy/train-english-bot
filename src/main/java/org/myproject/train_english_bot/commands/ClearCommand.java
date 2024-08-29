@@ -1,17 +1,21 @@
 package org.myproject.train_english_bot.commands;
 
-import org.myproject.train_english_bot.TelegramBot;
+import org.myproject.train_english_bot.events.MessageEvent;
 import org.myproject.train_english_bot.models.User;
-import org.myproject.train_english_bot.service.UserService;
+import org.springframework.stereotype.Component;
 
+@Component
 public class ClearCommand extends Command {
-    public ClearCommand(UserService userService) {
-        super(userService);
-    }
-
     @Override
-    public void execute(TelegramBot bot, User user) {
+    public void execute(User user) {
         user.getWords().clear();
-        bot.sendMessage(user.getChatId(), "All your words have been successfully deleted.");
+        eventPublisher.publishEvent(
+                new MessageEvent(
+                        this,
+                        user.getChatId(),
+                        "All your words have been successfully deleted.",
+                        null
+                )
+        );
     }
 }

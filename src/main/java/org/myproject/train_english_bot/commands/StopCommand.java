@@ -1,35 +1,42 @@
 package org.myproject.train_english_bot.commands;
 
-import org.myproject.train_english_bot.TelegramBot;
+import org.myproject.train_english_bot.events.MessageEvent;
 import org.myproject.train_english_bot.models.Mode;
 import org.myproject.train_english_bot.models.User;
-import org.myproject.train_english_bot.service.UserService;
 import org.springframework.stereotype.Component;
 
 @Component
 public class StopCommand extends Command {
-    public StopCommand(UserService userService) {
-        super(userService);
-    }
-
     @Override
-    public void execute(TelegramBot bot, User user) {
+    public void execute(User user) {
         Mode prevMode = user.getMode();
         if (prevMode == Mode.DEFAULT) {
-            bot.sendMessage(user.getChatId(), "You are already in default mode.");
+            eventPublisher.publishEvent(
+                    new MessageEvent(
+                            this,
+                            user.getChatId(),
+                            "You are already in default mode.",
+                            null
+                    )
+            );
             return;
         }
         userService.setUserMode(user, Mode.DEFAULT);
-        if (prevMode == Mode.TRAIN) {
-            bot.sendMessage(user.getChatId(), "Training has been stopped.");
-        } else if (prevMode == Mode.TRAIN_ONCE) {
-            bot.sendMessage(user.getChatId(), "Mini-training has been stopped.");
-        } else if (prevMode == Mode.ADD) {
-            bot.sendMessage(user.getChatId(), "Adding has been stopped");
-        } else if (prevMode == Mode.REMOVE) {
-            bot.sendMessage(user.getChatId(), "Removing has been stopped.");
-        } else {
-            bot.sendMessage(user.getChatId(), "You are not in any mode.");
+        String text;
+        switch (prevMode) {
+            case TRAIN -> text = "Training has been stopped.";
+            case TRAIN_ONCE -> text = "Mini-training has been stopped.";
+            case ADD -> text = "Adding has been stopped.";
+            case REMOVE -> text = "Removing has been stopped.";
+            default -> text = "You are not in any mode.";
         }
+        eventPublisher.publishEvent(
+                new MessageEvent(
+                        this,
+                        user.getChatId(),
+                        text,
+                        null
+                )
+        );
     }
 }

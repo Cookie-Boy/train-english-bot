@@ -11,16 +11,17 @@ import java.util.*;
 public class CommandService {
     private final Map<String, Command> commandMap;
 
-    public CommandService(UserService userService) {
+    public CommandService(Map<String, Command> commands) {
         this.commandMap = Map.of(
-                "/train", new TrainCommand(userService),
-                "/add", new AddCommand(userService),
-                "/stop", new StopCommand(userService),
-                "/words", new WordsCommand(userService),
-                "/clear", new ClearCommand(userService),
-                "/remove", new RemoveCommand(userService),
-                "/traintime", new TrainTimeCommand(userService),
-                "/randomtime", new RandomTimeCommand(userService));
+                "/train", commands.get("trainCommand"),
+                "/add", commands.get("addCommand"),
+                "/stop", commands.get("stopCommand"),
+                "/words", commands.get("wordsCommand"),
+                "/clear", commands.get("clearCommand"),
+                "/help", commands.get("helpCommand"),
+                "/remove", commands.get("removeCommand"),
+                "/traintime", commands.get("trainTimeCommand"),
+                "/randomtime", commands.get("randomTimeCommand"));
     }
 
     public Command getCommand(String command) {
@@ -34,6 +35,7 @@ public class CommandService {
                 new BotCommand("/stop", "stops any mode"),
                 new BotCommand("/words", "show word list"),
                 new BotCommand("/clear", "clear word list"),
+                new BotCommand("/help", "show help message"),
                 new BotCommand("/remove", "delete one word"),
                 new BotCommand("/traintime", "set time for daily training notifications"),
                 new BotCommand("/randomtime", "set time for one-time training")

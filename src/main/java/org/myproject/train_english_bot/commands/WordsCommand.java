@@ -1,25 +1,22 @@
 package org.myproject.train_english_bot.commands;
 
-import org.myproject.train_english_bot.TelegramBot;
+import org.myproject.train_english_bot.events.MessageEvent;
 import org.myproject.train_english_bot.models.User;
 import org.myproject.train_english_bot.models.Word;
-import org.myproject.train_english_bot.service.UserService;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class WordsCommand extends Command {
-    public WordsCommand(UserService userService) {
-        super(userService);
-    }
-
     @Override
-    public void execute(TelegramBot bot, User user) {
-        Long chatId = user.getChatId();
+    public void execute(User user) {
         List<Word> words = user.getWords();
+        String text;
         if (words.isEmpty()) {
-            bot.sendMessage(chatId, "You don't have any words to learn yet.");
+            text = "You don't have any words to learn yet.";
         } else {
-            String text = "OK! Here is the list of your words: \n\n";
+            text = "OK! Here is the list of your words: \n\n";
             for (int i = 0; i < words.size(); i++) {
                 Word word = words.get(i);
                 text = text.concat(String.format("%d. %s - %s\n",
@@ -28,7 +25,14 @@ public class WordsCommand extends Command {
                         word.getRuVersion()));
             }
             text = text.substring(0, text.length() - 1);
-            bot.sendMessage(chatId, text);
         }
+        eventPublisher.publishEvent(
+                new MessageEvent(
+                        this,
+                        user.getChatId(),
+                        text,
+                        null
+                )
+        );
     }
 }

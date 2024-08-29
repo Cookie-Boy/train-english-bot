@@ -5,11 +5,13 @@ import org.myproject.train_english_bot.models.User;
 import org.springframework.context.ApplicationEvent;
 
 @Getter
-public class QuestionEvent extends ApplicationEvent {
+public class AddEvent extends ApplicationEvent {
     private final User user;
+    private final String text;
 
-    public QuestionEvent(Object source, User user) {
+    public AddEvent(Object source, User user, String text) {
         super(source);
         this.user = user;
+        this.text = text;
     }
 }

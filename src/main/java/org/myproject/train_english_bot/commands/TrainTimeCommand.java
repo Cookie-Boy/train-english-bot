@@ -1,29 +1,33 @@
 package org.myproject.train_english_bot.commands;
 
-import org.myproject.train_english_bot.TelegramBot;
+import org.myproject.train_english_bot.events.MessageEvent;
 import org.myproject.train_english_bot.models.User;
 import org.myproject.train_english_bot.service.SchedulerService;
-import org.myproject.train_english_bot.service.UserService;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Component
 public class TrainTimeCommand extends AdvancedCommand {
-    public TrainTimeCommand(UserService userService) {
-        super(userService);
-    }
-
     @Override
-    public void execute(TelegramBot bot, User user) {
-        // doesn't have realization
-    }
-
-    @Override
-    public void execute(TelegramBot bot, User user, List<String> args) {
+    public void execute(User user, List<String> args) {
         if (args.size() > 2) {
-            bot.sendMessage(user.getChatId(), "Use example:\n/time [hour] [minute]");
+            eventPublisher.publishEvent(
+                    new MessageEvent(
+                            this,
+                            user.getChatId(),
+                            "Use example:\n/time [hour] [minute]",
+                            null
+                    )
+            );
             return;
         }
         var time = SchedulerService.getDateTime(Integer.parseInt(args.get(0)), Integer.parseInt(args.get(1)));
         userService.setUserTrainingNotification(user, time);
+    }
+
+    @Override
+    public void execute(User user) {
+        // doesn't have realization
     }
 }
